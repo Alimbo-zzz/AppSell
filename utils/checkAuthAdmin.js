@@ -14,7 +14,7 @@ export default (req, res, next) => {
 		const expire =  exp * 1000;
 		if(nowDate >= expire) return res.status(403).json({success: false, message: config.messages.deadToken});
 
-		req.userId = id;
+		req.adminId = id;
 		next();
 	} catch (error) {
 		console.log(`checkAuth Token Error -- ${error}`);

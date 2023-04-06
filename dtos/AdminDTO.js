@@ -5,7 +5,7 @@ export default (model) =>{
 
 	return {
 		id: model?.id,
-		username: model?.username,
+		name: model?.name,
 		email: model?.email,
 		avatarUrl: model?.avatarUrl,
 		created: new Date(model?.createdAt).getTime()

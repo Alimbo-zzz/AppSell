@@ -12,7 +12,7 @@ import routes from './routes/index.js'
 // vars
 const env = dotenv.config().parsed;
 const app = express();
-const PORT = env.PORT || 8080;
+const PORT = env.PORT || 6060;
 const db = env.DB_KEY;
 
 // data base

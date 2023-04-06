@@ -17,7 +17,7 @@ const schema = new mongoose.Schema({
 		required: false,
 		default: false
 	},
-	username: {
+	name: {
 		type: String,
 		required: true
 	},
@@ -42,4 +42,4 @@ const schema = new mongoose.Schema({
 
 
 
-export default mongoose.model('User', schema);
+export default mongoose.model('Admin', schema);

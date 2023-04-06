@@ -5,8 +5,8 @@ import config from 'config';
 
 
 export const register = [
-	body('username', 'username должен содержать мин 2 макс 20').isLength({ min: 2, max:20 }),
-	body('password', 'username должен содержать мин 6 макс 30').isLength({ min: 6, max:30 }),
+	body('name', 'name должен содержать мин 2 макс 20').isLength({ min: 2, max:20 }),
+	body('password', 'name должен содержать мин 6 макс 30').isLength({ min: 6, max:30 }),
 	body('email', 'почта не прошла валидацию').isEmail(),
 ]
 
@@ -16,10 +16,10 @@ export const login = [
 ]
 
 export const edit = [
-	body('username', 'username должен содержать мин 2 макс 20').optional().isLength({ min: 2, max:20 }),
+	body('name', 'name должен содержать мин 2 макс 20').optional().isLength({ min: 2, max:20 }),
 ]
 
-export const uploadImage = [
+export const productUpload = [
 	body('article', 'поле не должно быть пустым').notEmpty(),
 	body('title', 'поле не должно быть пустым').notEmpty(),
 	body('description', 'поле не должно быть пустым').notEmpty(),
@@ -29,8 +29,8 @@ export const uploadImage = [
 	body('templateType', 'неправильное значение').optional().isIn(["игры","утилиты","остальное"]),
 ]
 
-export const editImage = [
-	body('imageId', 'поле не должно быть пустым').notEmpty(),
+export const productEdit = [
+	body('productId', 'поле не должно быть пустым').notEmpty(),
 	body('article', 'поле не должно быть пустым').optional().notEmpty(),
 	body('title', 'поле не должно быть пустым').optional().notEmpty(),
 	body('description', 'поле не должно быть пустым').optional().notEmpty(),
@@ -40,7 +40,7 @@ export const editImage = [
 	body('templateType', 'неправильное значение').optional().isIn(["игры","утилиты","остальное"]),
 ]
 
-export const imageList = [
+export const productList = [
 	query('limit', 'передайте цифру').optional().isNumeric(),
 	query('page', 'передайте цифру').optional().isNumeric(),
 ]

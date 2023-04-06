@@ -9,11 +9,11 @@ import bcrypt from 'bcrypt';
 const env = dotenv.config().parsed;
 
 import { sendActivationLink } from '../utils/sendMail.js';
-import UserModel from '../models/User.js';
-import ItemModel from '../models/Item.js';
+import AdminModel from '../models/Admin.js';
+import ProductModel from '../models/Product.js';
 
-import UserDTO from '../dtos/UserDTO.js'
-import ItemDTO from '../dtos/ItemDTO.js'
+import AdminDTO from '../dtos/AdminDTO.js'
+import ProductDTO from '../dtos/ProductDTO.js'
 
 
 
@@ -22,19 +22,19 @@ export const register = async function(req, res){
 		const errors = validationResult(req);
 		if(!errors.isEmpty()) return res.status(400).json({success: false, massage: config.messages.validErr, errors: errors.array()});
 		const {email} = req.body;
-		const userExist = await UserModel.findOne({email});
-		const userObj = await setUserObj(req);
-		const activationLink = `${env.BASE_URL}/v1/user/activate/${setId()}`;
+		const adminExist = await AdminModel.findOne({email});
+		const adminObj = await setAdminObj(req);
+		const activationLink = `${env.BASE_URL}/v1/admin/activate/${setId()}`;
 		
-		if(!userExist){
-			const doc = new UserModel({...userObj, activationLink});
+		if(!adminExist){
+			const doc = new AdminModel({...adminObj, activationLink});
 			await doc.save();
 		}
-		if(userExist && userExist.isActivated) return res.status(400).json({success: false, message: `Пользователь с почтой ${email} уже существует`});
-		if(userExist){
-			await userExist.update({...userObj, activationLink})
-			if(userObj?.avatarUrl){
-				let oldFileName = userExist.avatarUrl.split('/').pop();			
+		if(adminExist && adminExist.isActivated) return res.status(400).json({success: false, message: `Пользователь с почтой ${email} уже существует`});
+		if(adminExist){
+			await adminExist.update({...adminObj, activationLink})
+			if(adminObj?.avatarUrl){
+				let oldFileName = adminExist.avatarUrl.split('/').pop();			
 				unlinkSync(`./static/avatars/${oldFileName}`)
 			}
 		}
@@ -45,13 +45,13 @@ export const register = async function(req, res){
 
 		// funcs
 
-		async function setUserObj(req){
-			const {email, username, password} = req.body;
-			const id = `user-${setId()}`;
+		async function setAdminObj(req){
+			const {email, name, password} = req.body;
+			const id = `admin-${setId()}`;
 			const salt = await bcrypt.genSalt(10)
 			const passwordHash = await bcrypt.hash(password, salt);
 			const avatar = req?.files?.avatar;
-			const result = {email, username, passwordHash, id} 
+			const result = {email, name, passwordHash, id} 
 
 			if(avatar) {
 				if(avatar.mimetype.split('/')[0] !== 'image') return res.status(400).json({success: false, message: config.messages.noImageFile});
@@ -69,23 +69,23 @@ export const register = async function(req, res){
 		}
 	}
 	catch(error){
-		console.log(`/v1/user/register -- ${error}`);
+		console.log(`/v1/admin/register -- ${error}`);
 		res.status(500).json({success: false, error, message: config.messages.noRegister})
 	}
 }
 
 export const activate = async function(req, res){
 	try{
-		const activationLink = `${env.BASE_URL}/v1/user/activate/${req.params.id}`;
-		const user = await UserModel.findOne({activationLink});
-		if(!user) return res.status(400).send('<h1>Ссылка неактивна</h1>');
+		const activationLink = `${env.BASE_URL}/v1/admin/activate/${req.params.id}`;
+		const admin = await AdminModel.findOne({activationLink});
+		if(!admin) return res.status(400).send('<h1>Ссылка неактивна</h1>');
 
-		await user.update({isActivated: true});
+		await admin.update({isActivated: true});
 
 		res.status(200).send('<h1>Аккаунт активирован</h1>')
 	}
 	catch(error){
-		console.log(`/v1/user/activate -- ${error}`);
+		console.log(`/v1/admin/activate -- ${error}`);
 		res.status(500).json({success: false, error, message: 'Непредвиденная ошибка'})
 	}
 }
@@ -95,35 +95,35 @@ export const login = async function(req, res){
 		const errors = validationResult(req);
 		if(!errors.isEmpty()) return res.status(400).json({success: false, massage: config.messages.validErr, errors: errors.array()});
 		const {email, password} = req.query;
-		const user = await UserModel.findOne({email});
-		if(!user) return res.status(400).json({success: false, message: config.messages.invalidLoginPass}) // не указываем что не найдена именно почта для безопасности
-		const isValidPass = await bcrypt.compare(password, user.passwordHash)
+		const admin = await AdminModel.findOne({email});
+		if(!admin) return res.status(400).json({success: false, message: config.messages.invalidLoginPass}) // не указываем что не найдена именно почта для безопасности
+		const isValidPass = await bcrypt.compare(password, admin.passwordHash)
 		if(!isValidPass) return res.status(400).json({success: false, message: config.messages.invalidLoginPass})  // не указываем что не найден именно пароль для безопасности
 
-		const token = jwt.sign({ id: user.id }, config.token.key, {expiresIn: config.token.age})
+		const token = jwt.sign({ id: admin.id }, config.token.key, {expiresIn: config.token.age})
 
 		res.status(200).json({success: true, token})
 
 	}
 	catch(error){
-		console.log(`/v1/user/login -- ${error}`);
+		console.log(`/v1/admin/login -- ${error}`);
 		res.status(500).json({success: false, error, message: 'Непредвиденная ошибка'})
 	}
 }
 
 export const auth = async function(req, res){
-  // await fetch(`${env.BASE_URL}/${env.API_VERSION}/user/update`, {headers:{authorization: req?.headers?.authorization}})
+  // await fetch(`${env.BASE_URL}/${env.API_VERSION}/admin/update`, {headers:{authorization: req?.headers?.authorization}})
 	try{
-		const {userId} = req;
-		const user = await UserModel.findOne({id: userId});
-		if(!user) return res.status(400).json({success: false, message: 'User не найден'});
+		const {adminId} = req;
+		const admin = await AdminModel.findOne({id: adminId});
+		if(!admin) return res.status(400).json({success: false, message: 'Admin не найден'});
 
-		const data = UserDTO(user);
+		const data = AdminDTO(admin);
 
 		res.status(200).json({success: true, data})
 	}
 	catch(error){
-		console.log(`/api/user/auth -- ${error}`);
+		console.log(`/api/admin/auth -- ${error}`);
 		res.status(500).json({success: false, error, message: 'Непредвиденная ошибка'})
 	}
 }
@@ -133,10 +133,10 @@ export const edit = async function(req, res) {
 		const errors = validationResult(req);
 		if(!errors.isEmpty()) return res.status(400).json({success: false, massage: config.messages.validErr, errors: errors.array()});
 		if(!Object.keys(req.body).length && !req?.files) return res.status(400).json({success: false, massage: config.messages.keysEmpty});;
-		const {userId} = req;
-		const user = await UserModel.findOne({id: userId});
-		if(!user) return res.status(400).json({success: false, error, message: 'User не найден'});
-		const dataKeys = ['username'];
+		const {adminId} = req;
+		const admin = await AdminModel.findOne({id: adminId});
+		if(!admin) return res.status(400).json({success: false, error, message: 'Admin не найден'});
+		const dataKeys = ['name'];
 		const avatar = req?.files?.avatar;
 
 		const editData = {};
@@ -146,7 +146,7 @@ export const edit = async function(req, res) {
 			if(avatar.mimetype.split('/')[0] !== 'image') return res.status(400).json({success: false, message: config.messages.noImageFile});
 			if(avatar.size > config.image.size) return res.status(400).json({success: false, message: config.messages.imageSize});
 			
-			let oldFileName = user.avatarUrl.split('/').pop();
+			let oldFileName = admin.avatarUrl.split('/').pop();
 			let date = moment().format('DDMMYYYY-HHmmss__SSS');
 			let avatarName = `avatar-${date}-${avatar.name}`;
 			let avatarLink = `${env.BASE_URL}/avatars/${avatarName}`;
@@ -156,60 +156,63 @@ export const edit = async function(req, res) {
 			unlink(`./static/avatars/${oldFileName}`, (err) => console.log(err) );
 		}
 
-		await user.updateOne(editData);
-		const updatedUser = await UserModel.findOne({id: userId});
+		await admin.updateOne(editData);
+		const updatedAdmin = await AdminModel.findOne({id: adminId});
 
-		const data = UserDTO(updatedUser);
+		const data = AdminDTO(updatedAdmin);
 
 		res.json({success: true, data})
-		// fetch(`${env.BASE_URL}/${env.API_VERSION}/user/update`, {headers:{authorization: req?.headers?.authorization}})
+		// fetch(`${env.BASE_URL}/${env.API_VERSION}/admin/update`, {headers:{authorization: req?.headers?.authorization}})
 	} catch (error) {
-		console.log(`/v1/user/edit -- ${error}`);
+		console.log(`/v1/admin/edit -- ${error}`);
 		res.status(400).json({success: false, error, message: config.messages.noAccess});
 	}
 }
 
 export const deleteAvatar = async function(req, res){
 	try {
-		const {userId} = req;
-		const user = await UserModel.findOne({id: userId});
-		if(!user) return res.status(400).json({success: false,  message: 'user не найден'});
+		const {adminId} = req;
+		const admin = await AdminModel.findOne({id: adminId});
+		if(!admin) return res.status(400).json({success: false,  message: 'admin не найден'});
 		
 
-		let oldFileName = user.avatarUrl.split('/').pop();
+		let oldFileName = admin.avatarUrl.split('/').pop();
 		unlink(`./static/avatars/${oldFileName}`, (err) => console.log(err) )
 
 		let defaultAvatarLink = `${env.BASE_URL}/resources/user-logo.png`;
-		await user.update({avatarUrl: defaultAvatarLink})
+		await admin.update({avatarUrl: defaultAvatarLink})
 
 		const data = {defaultAvatarLink}
 
 		res.status(200).json({success: true, data})
-		// fetch(`${env.BASE_URL}/${env.API_VERSION}/user/update`, {headers:{authorization: req?.headers?.authorization}})
+		// fetch(`${env.BASE_URL}/${env.API_VERSION}/admin/update`, {headers:{authorization: req?.headers?.authorization}})
 	} catch (error) {
-		console.log(`/v1/user/delete/avatar -- ${error}`);
+		console.log(`/v1/admin/delete/avatar -- ${error}`);
 		res.status(400).json({success: false, error, message: config.messages.noAccess});
 	}
 }
 
 export const deleteAccount = async function(req, res){
 	try {
-		const {userId} = req;
-		await UserModel.deleteOne({id: userId});
+		const {adminId} = req;
+		await AdminModel.deleteOne({id: adminId});
 		res.status(200).json({success: true, message: 'Аккаунт удален'})
 	} catch (error) {
-		console.log(`/api/user/update -- ${error}`);
+		console.log(`/api/admin/update -- ${error}`);
 		res.status(400).json({success: false, error, message: config.messages.noAccess});
 	}
 }
 
-export const uploadImage = async function(req, res){
+
+// product
+
+export const productUpload = async function(req, res){
 	try{
 		const errors = validationResult(req);
 		if(!errors.isEmpty()) return res.status(400).json({success: false, massage: config.messages.validErr, errors: errors.array()});
-		const {userId} = req;
-		const user = await UserModel.findOne({id: userId});
-		if(!user) return res.status(400).json({success: false, message: 'User не найден'});
+		const {adminId} = req;
+		const admin = await AdminModel.findOne({id: adminId});
+		if(!admin) return res.status(400).json({success: false, message: 'Admin не найден'});
 		const {article, title, description, category, platform, price, templateType} = req.body;
 		const image = req?.files?.image;
 
@@ -218,35 +221,35 @@ export const uploadImage = async function(req, res){
 
 		let date = moment().format('DDMMYYYY-HHmmss__SSS');
 		let imageName = `image-${date}-${image.name}`;
-		let imageURL = `${env.BASE_URL}/images/${imageName}`;
-		await image.mv('./static/images/' + imageName)
-		const imageId = `image-${setId()}`;
+		let imageURL = `${env.BASE_URL}/products/${imageName}`;
+		await image.mv('./static/products/' + imageName)
+		const productId = `product-${setId()}`;
 		
 		
-		const doc = new ItemModel({id: imageId, refId: userId, imageURL, article, title, description, category, platform, price, templateType});
+		const doc = new ProductModel({id: productId, refId: adminId, imageURL, article, title, description, category, platform, price, templateType});
 		await doc.save();
-		const data = ItemDTO(doc);
+		const data = ProductDTO(doc);
 
 		res.status(200).json({success: true, data})
 
 	}
 	catch(error){
-		console.log(`/v1/user/upload/image -- ${error}`);
+		console.log(`/v1/admin/product/upload -- ${error}`);
 		res.status(500).json({success: false, error, message: config.messages.noAccess})
 	}
 }
 
-export const editImage = async function(req, res){
+export const productEdit = async function(req, res){
 	try {
 		const errors = validationResult(req);
 		if(!errors.isEmpty()) return res.status(400).json({success: false, massage: config.messages.validErr, errors: errors.array()});
 		if(!Object.keys(req.body).length && !req?.files) return res.status(400).json({success: false, massage: config.messages.keysEmpty});;
-		const {userId} = req;
-		const user = await UserModel.findOne({id: userId});
-		if(!user) return res.status(400).json({success: false, message: 'user не найден'});
-		const {imageId} = req.body;
-		const db_item = await ItemModel.findOne({id: imageId});
-		if(!db_item) return res.status(400).json({success: false, message: 'изображение не найден'});
+		const {adminId} = req;
+		const admin = await AdminModel.findOne({id: adminId});
+		if(!admin) return res.status(400).json({success: false, message: 'admin не найден'});
+		const {productId} = req.body;
+		const db_product = await ProductModel.findOne({id: productId});
+		if(!db_product) return res.status(400).json({success: false, message: 'изображение не найден'});
 
 		const dataKeys = ['article', 'title', 'description', 'category', 'platform', 'price', 'templateType'];
 		const image = req?.files?.image;
@@ -256,68 +259,68 @@ export const editImage = async function(req, res){
 			if(image?.mimetype?.split('/')[0] !== 'image') return res.status(400).json({success: false, message: config.messages.noImageFile});
 			if(image.size > config.image.size) return res.status(400).json({success: false, message: config.messages.imageSize});
 			
-			let oldFileName = db_item.imageURL.split('/').pop();
+			let oldFileName = db_product.imageURL.split('/').pop();
 			let date = moment().format('DDMMYYYY-HHmmss__SSS');
 			let imageName = `image-${date}-${image.name}`;
-			let imageLink = `${env.BASE_URL}/images/${imageName}`;
+			let imageLink = `${env.BASE_URL}/products/${imageName}`;
 
-			image.mv('./static/images/' + imageName)
+			image.mv('./static/products/' + imageName)
 			editData.imageURL = imageLink;
-			unlink(`./static/images/${oldFileName}`, (err) => console.log(err) );
+			unlink(`./static/products/${oldFileName}`, (err) => console.log(err) );
 		}
 
-		await db_item.updateOne(editData);
-		const updatedItem = await ItemModel.findOne({id: imageId});
+		await db_product.updateOne(editData);
+		const updatedProduct = await ProductModel.findOne({id: productId});
 
-		const data = ItemDTO(updatedItem);
+		const data = ProductDTO(updatedProduct);
 
 		res.status(200).json({success: true, data})
-		// fetch(`${env.BASE_URL}/${env.API_VERSION}/user/update`, {headers:{authorization: req?.headers?.authorization}})
+		// fetch(`${env.BASE_URL}/${env.API_VERSION}/admin/update`, {headers:{authorization: req?.headers?.authorization}})
 	} catch (error) {
-		console.log(`/v1/user/image/edit -- ${error}`);
+		console.log(`/v1/admin/product/edit -- ${error}`);
 		res.status(400).json({success: false, error, message: config.messages.noAccess});
 	}
 }
 
-export const deleteImage = async function(req, res){
+export const productDelete = async function(req, res){
 	try {
-		const {userId} = req;
-		const user = await UserModel.findOne({id: userId});
-		if(!user) return res.status(400).json({success: false, message: 'user не найден'});
-		const {imageId} = req.params;
-		const db_item = await ItemModel.findOne({id: imageId});
-		if(!db_item) return res.status(400).json({success: false, message: 'изображение не найден'});
+		const {adminId} = req;
+		const admin = await AdminModel.findOne({id: adminId});
+		if(!admin) return res.status(400).json({success: false, message: 'admin не найден'});
+		const {productId} = req.params;
+		const db_product = await ProductModel.findOne({id: productId});
+		if(!db_product) return res.status(400).json({success: false, message: 'изображение не найден'});
 
-		let oldFileName = db_item.imageURL.split('/').pop();
-		unlink(`./static/images/${oldFileName}`, (err) => console.log(err) )
-		await ItemModel.deleteOne({id: imageId});
+		let oldFileName = db_product.imageURL.split('/').pop();
+		unlink(`./static/products/${oldFileName}`, (err) => console.log(err) )
+		await ProductModel.deleteOne({id: productId});
 
 		res.status(200).json({success: true, message: 'изображение удалено'})
-		// fetch(`${env.BASE_URL}/${env.API_VERSION}/user/update`, {headers:{authorization: req?.headers?.authorization}})
+		// fetch(`${env.BASE_URL}/${env.API_VERSION}/admin/update`, {headers:{authorization: req?.headers?.authorization}})
 	} catch (error) {
-		console.log(`/v1/user/delete/avatar -- ${error}`);
+		console.log(`/v1/admin/product/delete -- ${error}`);
 		res.status(400).json({success: false, error, message: config.messages.noAccess});
 	}
 }
 
-export const imageList = async function(req, res){	
+export const productList = async function(req, res){	
 	try {
 		const errors = validationResult(req);
 		if(!errors.isEmpty()) return res.status(400).json({success: false, massage: config.messages.validErr, errors: errors.array()});
-		const {userId} = req;
-		const user = await UserModel.findOne({id: userId});
-		if(!user) return res.status(400).json({success: false, message: 'user не найден'}); 
+		const {adminId} = req;
+		const admin = await AdminModel.findOne({id: adminId});
+		if(!admin) return res.status(400).json({success: false, message: 'admin не найден'}); 
 		const {limit=30, page=1} = req?.query;
-		const db_list = await ItemModel.find();
+		const db_list = await ProductModel.find();
 		const pageCount = Math.ceil(db_list.length / limit);
 		
 
-		const list = db_list.map(el => ({ ...ItemDTO(el) }))
+		const list = db_list.map(el => ({ ...ProductDTO(el) }))
 		const resultArr = [];
 		while(list.length) resultArr.push(list.splice(0,limit)); // Разбираем массив
 
 		const data = {
-			images: resultArr[page-1] || [],
+			products: resultArr[page-1] || [],
 			page,
 			pageCount,
 			totalCount: db_list.length
@@ -326,7 +329,7 @@ export const imageList = async function(req, res){
 		res.status(200).json({success: true, data})
 		// fetch(`${env.BASE_URL}/admin/update`, {headers:{authorization: req?.headers?.authorization}})
 	} catch (error) {
-		console.log(`/v1/user/image/list -- ${error}`);
+		console.log(`/v1/admin/product/list -- ${error}`);
 		res.status(500).json({success: false, error, message: config.messages.noAccess})
 	}
 }
