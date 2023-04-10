@@ -1,14 +1,14 @@
 import express from 'express';
 const app = express();
 
-// routes
 import routesApp from './RouteApp.js'
 import routesAdmin from './RouteAdmin.js';
+import routesBot from './RouteBot.js';
 
 
-// use routes
-app.use(routesApp) // app Routes
-app.use(routesAdmin) // user Routes
+app.use(routesApp)
+app.use(routesAdmin) 
+app.use(routesBot)
 
 
 export default app;
